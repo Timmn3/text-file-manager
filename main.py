@@ -2,11 +2,9 @@ import sys
 import os
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
-    QTextEdit, QFileDialog, QLineEdit, QLabel
+    QTextEdit, QFileDialog, QInputDialog, QMessageBox
 )
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QIcon
-
 import json
 
 
@@ -39,16 +37,62 @@ class TxtViewerApp(QMainWindow):
         # Основной интерфейс
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
-        self.layout = QHBoxLayout()
+        self.layout = QVBoxLayout()
         self.central_widget.setLayout(self.layout)
+
+        # Верхний раздел: список файлов и текстовый редактор
+        self.top_layout = QHBoxLayout()
+        self.layout.addLayout(self.top_layout)
 
         self.file_list_widget = QWidget()
         self.file_list_layout = QVBoxLayout()
         self.file_list_widget.setLayout(self.file_list_layout)
-        self.layout.addWidget(self.file_list_widget)
+        self.top_layout.addWidget(self.file_list_widget)
 
         self.editor = QTextEdit()
-        self.layout.addWidget(self.editor)
+        self.top_layout.addWidget(self.editor)
+
+        # Нижний раздел: кнопки
+        self.bottom_layout = QHBoxLayout()
+        self.layout.addLayout(self.bottom_layout)
+
+        # Кнопки
+        # Кнопки
+        self.select_folder_button = QPushButton("Выбрать папку")
+        self.select_folder_button.clicked.connect(self.select_folder)
+        self.select_folder_button.setStyleSheet("""
+            QPushButton {
+                background-color: #007BFF;  /* Синий цвет */
+                color: white;
+                border-radius: 10px;
+                font-size: 16px;
+                padding: 10px;
+                border: none;
+                margin: 5px;
+            }
+            QPushButton:hover {
+                background-color: #0056b3; /* Темно-синий цвет */
+            }
+        """)
+        self.bottom_layout.addWidget(self.select_folder_button)
+
+        self.new_file_button = QPushButton("Создать новый файл")
+        self.new_file_button.clicked.connect(self.create_new_file)
+        self.new_file_button.setStyleSheet("""
+            QPushButton {
+                background-color: #007BFF;  /* Синий цвет */
+                color: white;
+                border-radius: 10px;
+                font-size: 16px;
+                padding: 10px;
+                border: none;
+                margin: 5px;
+            }
+            QPushButton:hover {
+                background-color: #0056b3; /* Темно-синий цвет */
+            }
+        """)
+        self.bottom_layout.addWidget(self.new_file_button)
 
         # Список файлов
         self.files = {}
@@ -56,23 +100,44 @@ class TxtViewerApp(QMainWindow):
 
         self.init_ui()
 
+        # Стилизация интерфейса
+        self.set_styles()
+
     def init_ui(self):
-        # Кнопка для выбора папки
-        self.select_folder_button = QPushButton("Выбрать папку")
-        self.select_folder_button.clicked.connect(self.select_folder)
-        self.file_list_layout.addWidget(self.select_folder_button)
-
-        # Кнопка для создания нового файла
-        self.new_file_button = QPushButton("Создать новый файл")
-        self.new_file_button.setStyleSheet("background-color: lightblue;")
-        self.new_file_button.clicked.connect(self.create_new_file)
-        self.file_list_layout.addWidget(self.new_file_button)
-
-        self.new_file_input = QLineEdit()
-        self.file_list_layout.addWidget(self.new_file_input)
-
         if self.default_path:
             self.load_files(self.default_path)
+
+    def set_styles(self):
+        """Стилизация интерфейса с использованием QSS."""
+        self.setStyleSheet("""
+            QWidget {
+                background-color: #f2f2f2;
+                font-family: Arial, sans-serif;
+                font-size: 16px;
+            }
+            QPushButton {
+                background-color: #4CAF50; /* Светло-зеленый */
+                color: white;
+                border-radius: 10px;
+                font-size: 16px;
+                padding: 10px;
+                border: none;
+                margin: 5px;
+            }
+            QPushButton:hover {
+                background-color: #45a049; /* Темно-зеленый при наведении */
+            }
+            QPushButton:disabled {
+                background-color: #ccc;
+            }
+            QTextEdit {
+                border: 2px solid #ccc;
+                border-radius: 10px;
+                padding: 8px;
+                font-size: 16px;
+                background-color: white;
+            }
+        """)
 
     def select_folder(self):
         folder = QFileDialog.getExistingDirectory(self, "Выберите папку", self.default_path or os.getcwd())
@@ -86,7 +151,7 @@ class TxtViewerApp(QMainWindow):
         self.files.clear()
         for i in reversed(range(self.file_list_layout.count())):
             widget = self.file_list_layout.itemAt(i).widget()
-            if isinstance(widget, QPushButton) and widget not in {self.select_folder_button, self.new_file_button}:
+            if isinstance(widget, QPushButton):
                 self.file_list_layout.removeWidget(widget)
                 widget.deleteLater()
 
@@ -96,7 +161,6 @@ class TxtViewerApp(QMainWindow):
                 self.files[file_name] = f.read()
 
             button = QPushButton(file_name[:-4])
-            button.setStyleSheet("background-color: lightgreen;")
             button.clicked.connect(lambda _, name=file_name: self.open_file(name))
             self.file_list_layout.addWidget(button)
 
@@ -105,17 +169,17 @@ class TxtViewerApp(QMainWindow):
         self.editor.setPlainText(self.files[file_name])
 
     def create_new_file(self):
-        file_name = self.new_file_input.text().strip()
-        if not file_name:
-            return
-
-        full_path = os.path.join(self.default_path, f"{file_name}.txt")
-        if not os.path.exists(full_path):
-            with open(full_path, "w", encoding="utf-8") as f:
-                f.write("")
-            self.files[f"{file_name}.txt"] = ""
-            self.load_files(self.default_path)
-            self.new_file_input.clear()
+        file_name, ok = QInputDialog.getText(self, "Создать новый файл", "Введите имя файла:")
+        if ok and file_name.strip():
+            file_name = file_name.strip()
+            full_path = os.path.join(self.default_path, f"{file_name}.txt")
+            if os.path.exists(full_path):
+                QMessageBox.warning(self, "Ошибка", "Файл с таким именем уже существует!")
+            else:
+                with open(full_path, "w", encoding="utf-8") as f:
+                    f.write("")
+                self.files[f"{file_name}.txt"] = ""
+                self.load_files(self.default_path)
 
     def closeEvent(self, event):
         # Сохранение изменений
