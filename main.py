@@ -57,7 +57,6 @@ class TxtViewerApp(QMainWindow):
         self.layout.addLayout(self.bottom_layout)
 
         # Кнопки
-        # Кнопки
         self.select_folder_button = QPushButton("Выбрать папку")
         self.select_folder_button.clicked.connect(self.select_folder)
         self.select_folder_button.setStyleSheet("""
@@ -76,8 +75,8 @@ class TxtViewerApp(QMainWindow):
         """)
         self.bottom_layout.addWidget(self.select_folder_button)
 
-        self.new_file_button = QPushButton("Создать новый файл")
-        self.new_file_button.clicked.connect(self.create_new_file)
+        self.new_file_button = QPushButton("Сохранить файл")
+        self.new_file_button.clicked.connect(self.save_file)
         self.new_file_button.setStyleSheet("""
             QPushButton {
                 background-color: #007BFF;  /* Синий цвет */
@@ -92,6 +91,24 @@ class TxtViewerApp(QMainWindow):
                 background-color: #0056b3; /* Темно-синий цвет */
             }
         """)
+        self.bottom_layout.addWidget(self.new_file_button)
+
+        self.new_file_button = QPushButton("Создать новый файл")
+        self.new_file_button.clicked.connect(self.create_new_file)
+        self.new_file_button.setStyleSheet("""
+                    QPushButton {
+                        background-color: #007BFF;  /* Синий цвет */
+                        color: white;
+                        border-radius: 10px;
+                        font-size: 16px;
+                        padding: 10px;
+                        border: none;
+                        margin: 5px;
+                    }
+                    QPushButton:hover {
+                        background-color: #0056b3; /* Темно-синий цвет */
+                    }
+                """)
         self.bottom_layout.addWidget(self.new_file_button)
 
         # Список файлов
@@ -167,6 +184,17 @@ class TxtViewerApp(QMainWindow):
     def open_file(self, file_name):
         self.current_file = file_name
         self.editor.setPlainText(self.files[file_name])
+
+    def save_file(self):
+        if self.current_file and self.current_file in self.files:
+            self.files[self.current_file] = self.editor.toPlainText()
+
+        for file_name, content in self.files.items():
+            full_path = os.path.join(self.default_path, file_name)
+            with open(full_path, "w", encoding="utf-8") as f:
+                f.write(content)
+
+        QMessageBox.about(self, "Сохранение", "Файл успешно сохранен!")
 
     def create_new_file(self):
         file_name, ok = QInputDialog.getText(self, "Создать новый файл", "Введите имя файла:")
